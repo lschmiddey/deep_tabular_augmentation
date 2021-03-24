@@ -153,7 +153,7 @@ class AutoencoderModel:
 
     def predict(self, no_samples, target_class):
         with torch.no_grad():
-            for batch_idx, data in enumerate(self.testloader):
+            for batch_idx, data in enumerate(self.trainloader):
                 data = data.to(self.device)
                 self.optimizer.zero_grad()
                 _, mu_, logvar_ = self.model(data)
