@@ -141,7 +141,7 @@ class AutoencoderModel:
             self.test_model(epoch, verbose, interval)
         return self
 
-    def predict(self, no_samples, scaler, cols, target_class=None):
+    def predict(self, no_samples, scaler, cols, target_class=None, cont_vars=None):
         with torch.no_grad():
             for batch_idx, data in enumerate(self.trainloader):
                 data = data.to(self.device)
@@ -159,13 +159,16 @@ class AutoencoderModel:
         z = q.rsample(sample_shape=torch.Size([no_samples]))
         with torch.no_grad():
             pred = self.model.decode(z).cpu().numpy()
-        df_fake = pd.DataFrame(scaler.inverse_transform(pred), columns=cols)
         if target_class:
-            df_fake['Class']=target_class
+            df_fake = pd.DataFrame(pred, columns=cols)
+            df_fake[cont_vars]=scaler.inverse_transform(df_fake[cont_vars])
+            df_fake[target_class]=1
+        else:
+            df_fake = pd.DataFrame(scaler.inverse_transform(pred), columns=cols)
         return df_fake
     
-    def predict_with_noise(self, no_samples, scaler, cols, mu, sigma, group_var):
-        df_fake_with_noise = self.predict(no_samples, scaler, cols)
+    def predict_with_noise(self, no_samples, scaler, cols, mu, sigma, group_var, target_class=None, cont_vars=None):
+        df_fake_with_noise = self.predict(no_samples, scaler, cols, target_class, cont_vars)
         np_matrix = df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var].values
         np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
         df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var] = np_matrix
