@@ -1,13 +1,3 @@
-'''
-Was ich haben will:
-automatisch über .fit training und validation output
-über .predict fake data generieren
-als Daten sollen die Daten reinkommen, für die fake_data generiert werden soll
-automatisch die gewünschte Klasse anhängen
-zunächst soll angenommen werden, dass die Daten schon richtig skaliert etc sind
-zukünftig auch innerhalb der Klasse das Ganze als Dataloader reinpacken
-mit normierung und absplitten der gewünschten nachgebauten Klasse
-'''
 import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -15,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn, optim
 from torch.autograd import Variable
 import pandas as pd
-
+import numpy as np
 
 
 class customLoss(nn.Module):
@@ -111,7 +101,7 @@ class AutoencoderModel:
         self.optimizer=optim.Adam(self.model.parameters(), lr=1e-3)
         self.loss_mse = customLoss()
     
-    def train_model(self,epoch, verbose):
+    def train_model(self,epoch, verbose, interval):
         train_losses = []
         self.model.train()
         train_loss = 0
@@ -124,12 +114,12 @@ class AutoencoderModel:
             train_loss += loss.item()
             self.optimizer.step()
         if verbose:
-            if epoch % 200 == 0:        
+            if epoch % interval == 0:        
                 print('====> Epoch: {} Average training loss: {:.4f}'.format(
                     epoch, train_loss / len(self.trainloader.dataset)))
                 train_losses.append(train_loss / len(self.trainloader.dataset))
 
-    def test_model(self, epoch, verbose):
+    def test_model(self, epoch, verbose, interval):
         test_losses = []
         with torch.no_grad():
             test_loss = 0
@@ -140,18 +130,18 @@ class AutoencoderModel:
                 loss = self.loss_mse(recon_batch, data, mu, logvar)
                 test_loss += loss.item()
             if verbose:
-                if epoch % 200 == 0:        
+                if epoch % interval == 0:        
                     print('====> Epoch: {} Average test loss: {:.4f}'.format(
                         epoch, test_loss / len(self.testloader.dataset)))
                 test_losses.append(test_loss / len(self.testloader.dataset))
 
-    def fit(self, epochs, verbose=True):
+    def fit(self, epochs, verbose=True, interval=200):
         for epoch in range(1, epochs + 1):
-            self.train_model(epoch, verbose)
-            self.test_model(epoch, verbose)
+            self.train_model(epoch, verbose, interval)
+            self.test_model(epoch, verbose, interval)
         return self
 
-    def predict(self, no_samples, target_class):
+    def predict(self, no_samples, scaler, cols, target_class=None):
         with torch.no_grad():
             for batch_idx, data in enumerate(self.trainloader):
                 data = data.to(self.device)
@@ -169,7 +159,15 @@ class AutoencoderModel:
         z = q.rsample(sample_shape=torch.Size([no_samples]))
         with torch.no_grad():
             pred = self.model.decode(z).cpu().numpy()
-        df_fake = pd.DataFrame(pred)
-        df_fake['Class']=target_class
+        df_fake = pd.DataFrame(scaler.inverse_transform(pred), columns=cols)
+        if target_class:
+            df_fake['Class']=target_class
         return df_fake
+    
+    def predict_with_noise(self, no_samples, scaler, cols, mu, sigma, group_var):
+        df_fake_with_noise = self.predict(no_samples, scaler, cols)
+        np_matrix = df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var].values
+        np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
+        df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var] = np_matrix
+        return df_fake_with_noise
 
