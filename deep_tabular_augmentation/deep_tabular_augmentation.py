@@ -135,13 +135,13 @@ class AutoencoderModel:
                         epoch, test_loss / len(self.testloader.dataset)))
                 test_losses.append(test_loss / len(self.testloader.dataset))
 
-    def fit(self, epochs, verbose=True, interval=200):
+    def fit(self, epochs:int, verbose:bool=True, interval:int=200):
         for epoch in range(1, epochs + 1):
             self.train_model(epoch, verbose, interval)
             self.test_model(epoch, verbose, interval)
         return self
 
-    def predict(self, no_samples, scaler, cols, target_class=None, cont_vars=None):
+    def predict_df(self, no_samples:int, cols:list, scaler=None, target_class:list=None, cont_vars:list=None):
         with torch.no_grad():
             for batch_idx, data in enumerate(self.trainloader):
                 data = data.to(self.device)
@@ -159,18 +159,60 @@ class AutoencoderModel:
         z = q.rsample(sample_shape=torch.Size([no_samples]))
         with torch.no_grad():
             pred = self.model.decode(z).cpu().numpy()
-        if target_class:
+        if scaler:
             df_fake = pd.DataFrame(pred, columns=cols)
-            df_fake[cont_vars]=scaler.inverse_transform(df_fake[cont_vars])
-            df_fake[target_class]=1
+            if cont_vars:
+                df_fake[cont_vars]=scaler.inverse_transform(df_fake[cont_vars])
+            else:
+                df_fake=pd.DataFrame(scaler.inverse_transform(df_fake), columns=cols)
+            if target_class:
+                df_fake[target_class]=1
         else:
-            df_fake = pd.DataFrame(scaler.inverse_transform(pred), columns=cols)
+            df_fake = pd.DataFrame(pred, columns=cols)
         return df_fake
+
+    def predict_np(self, no_samples:int):
+        with torch.no_grad():
+            for batch_idx, data in enumerate(self.trainloader):
+                data = data.to(self.device)
+                self.optimizer.zero_grad()
+                _, mu_, logvar_ = self.model(data)
+                if batch_idx==0:
+                    mu=mu_
+                    logvar=logvar_
+                else:
+                    mu=torch.cat((mu, mu_), dim=0)
+                    logvar=torch.cat((logvar, logvar_), dim=0)
+        sigma = torch.exp(logvar/2)
+        no_samples = no_samples
+        q = torch.distributions.Normal(mu.mean(axis=0), sigma.mean(axis=0))
+        z = q.rsample(sample_shape=torch.Size([no_samples]))
+        with torch.no_grad():
+            pred = self.model.decode(z).cpu().numpy()
+        return pred
     
-    def predict_with_noise(self, no_samples, scaler, cols, mu, sigma, group_var, target_class=None, cont_vars=None):
-        df_fake_with_noise = self.predict(no_samples, scaler, cols, target_class, cont_vars)
-        np_matrix = df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var].values
-        np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
-        df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var] = np_matrix
+    def predict_with_noise_df(self, no_samples:int, cols:list, mu:float, sigma:float, group_var:str=None, scaler=None, target_class:list=None, cont_vars:list=None):
+        df_fake_with_noise = self.predict_df(no_samples, cols, scaler=scaler, target_class=target_class, cont_vars=cont_vars)
+        if group_var:
+            np_matrix = df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var].values
+            np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
+            df_fake_with_noise.loc[:,df_fake_with_noise.columns!=group_var] = np_matrix
+        else:
+            np_matrix = df_fake_with_noise.values
+            np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
+            df_fake_with_noise.loc[:,:] = np_matrix
+        
+        return df_fake_with_noise
+
+    def predict_with_noise_np(self, no_samples:int, mu:float, sigma:float, group_var_idx:int=None):
+        df_fake_with_noise = self.predict_np(no_samples)
+        if group_var_idx:
+            selector = [x for x in range(a.shape[1]) if x != group_var_idx]
+            np_matrix = df_fake_with_noise[:,selector]
+            np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
+            df_fake_with_noise[:,selector] = np_matrix
+        else:
+            df_fake_with_noise = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in df_fake_with_noise for val in sublist]).reshape(-1,df_fake_with_noise.shape[1])
+        
         return df_fake_with_noise
 
