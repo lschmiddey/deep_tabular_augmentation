@@ -6,6 +6,8 @@ from torch.autograd import Variable
 
 
 class customLoss(nn.Module):
+    """ The Variational Autoencoder needs a Loss function which is not yet covered by PyTorch
+    """
     def __init__(self):
         super(customLoss, self).__init__()
         self.mse_loss = nn.MSELoss(reduction="sum")
@@ -17,18 +19,24 @@ class customLoss(nn.Module):
 
 
 def lin_layer(ni, no):
+    """ helper function for basic structure of linear layer
+    """
     return nn.Sequential(
         nn.Linear(ni, no), nn.BatchNorm1d(no), nn.ReLU())
 
 
-def get_lin_layers(input_shape, output_shapes:list):
+def get_lin_layers(input_shape:int, output_shapes:list):
+    """ this function helps to customize the encoder-part of the VAE
+    """
     output_shapes = [input_shape] + output_shapes
     return [
         lin_layer(output_shapes[i], output_shapes[i+1])
         for i in range(len(output_shapes)-1)
     ]
 
-def get_lin_layers_rev(input_shape, output_shapes:list):
+def get_lin_layers_rev(input_shape:int, output_shapes:list):
+    """ this function helps to customize the decoder-part of the VAE
+    """
     output_shapes =  output_shapes[::-1] + [input_shape]
     layers= [
         lin_layer(output_shapes[i], output_shapes[i+1])
@@ -41,7 +49,9 @@ def get_lin_layers_rev(input_shape, output_shapes:list):
 
 
 class Autoencoder(nn.Module):
-    def __init__(self,lin_layers,lin_layers_rev,latent_dim=3):
+    """ this is the main model, taking in nn.Sequential layers
+    """
+    def __init__(self, lin_layers:nn.Sequential, lin_layers_rev:nn.Sequential, latent_dim=3):
        
         #Encoder
         super(Autoencoder,self).__init__()

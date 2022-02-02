@@ -10,11 +10,15 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class Learner():
+    """ helper class in which all the data relevant part is stored
+    """
     def __init__(self, model, opt, loss_func, data, target_name:str, target_class:int, cols:list, cont_vars:list=None):
         self.model,self.opt,self.loss_func,self.data,self.target_name,self.target_class,self.cols,self.cont_vars = model,opt,loss_func,data,target_name,target_class,cols,cont_vars
 
 
 class Runner():
+    """ helper class which acts as a pipeline through which the data should run
+    """
     def __init__(self, cbs=None, cb_funcs=None):
         self.in_train = False
         cbs = listify(cbs)
@@ -96,6 +100,7 @@ class Runner():
                     mu=torch.cat((mu, mu_), dim=0)
                     logvar=torch.cat((logvar, logvar_), dim=0)
         return mu, logvar
+
 
     def predict_df(self, learn, no_samples:int, scaler=None):
         self.learn = learn
