@@ -127,17 +127,17 @@ class Runner():
 
         return df_fake
 
-    def predict_with_noise_df(self, learn, no_samples:int, mu:float, sigma:float, group_var:str=None, scaler=None):
+    def predict_with_noise_df(self, learn, no_samples:int, mu:float, sigma:list, group_var:str=None, scaler=None):
         self.learn = learn
 
         df_fake_with_noise = self.predict_df(learn, no_samples, scaler=scaler)
         if group_var:
             np_matrix = df_fake_with_noise[self.cols].loc[:,df_fake_with_noise[self.cols].columns!=group_var].values
-            np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
+            np_matrix = np.array([val*(1+np.random.normal(mu, sigma[i], 1)) for sublist in np_matrix for i, val in enumerate(sublist)]).reshape(-1,np_matrix.shape[1])
             df_fake_with_noise[self.cols].loc[:,df_fake_with_noise[self.cols].columns!=group_var] = np_matrix
         else:
             np_matrix = df_fake_with_noise[self.cols].values
-            np_matrix = np.array([val*(1+np.random.normal(mu, sigma, 1)) for sublist in np_matrix for val in sublist]).reshape(-1,np_matrix.shape[1])
+            np_matrix = np.array([val*(1+np.random.normal(mu, sigma[i], 1)) for sublist in np_matrix for i, val in enumerate(sublist)]).reshape(-1,np_matrix.shape[1])
             df_fake_with_noise[self.cols].loc[:,:] = np_matrix
 
         return df_fake_with_noise
