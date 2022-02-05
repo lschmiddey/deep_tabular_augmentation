@@ -50,7 +50,7 @@ def get_lin_layers_rev(input_shape:int, output_shapes:list):
 class Autoencoder(nn.Module):
     """ this is the main model, taking in nn.Sequential layers
     """
-    def __init__(self, D_in:int, lin_layers:list, latent_dim=3):
+    def __init__(self, D_in:int, lin_layers:list, latent_dim:int=3):
        
         #Encoder
         super(Autoencoder,self).__init__()
