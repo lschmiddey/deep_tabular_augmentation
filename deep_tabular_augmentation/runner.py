@@ -3,7 +3,7 @@ from .callbacks import *
 
 from typing import Any
 import torch
-from torch.nn import functional as F
+from torch.utils.data import DataLoader
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -12,7 +12,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 class Learner():
     """ helper class in which all the data relevant part is stored
     """
-    def __init__(self, model, opt, loss_func, data, target_name:str, target_class:int, cols:list, cont_vars:list=None):
+    def __init__(self, model, opt, loss_func, data:DataLoader, target_name:str, target_class:int, cols:list, cont_vars:list=None):
         self.model,self.opt,self.loss_func,self.data,self.target_name,self.target_class,self.cols,self.cont_vars = model,opt,loss_func,data,target_name,target_class,cols,cont_vars
 
 

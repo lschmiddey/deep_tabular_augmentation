@@ -47,18 +47,19 @@ def get_lin_layers_rev(input_shape:int, output_shapes:list):
     return layers
     
 
-
 class Autoencoder(nn.Module):
     """ this is the main model, taking in nn.Sequential layers
     """
-    def __init__(self, lin_layers:nn.Sequential, lin_layers_rev:nn.Sequential, latent_dim=3):
+    def __init__(self, D_in:int, lin_layers:list, latent_dim:int=3):
        
         #Encoder
         super(Autoencoder,self).__init__()
-        self.encoder = lin_layers
+        # self.encoder = lin_layers
+        self.encoder = nn.Sequential(*get_lin_layers(D_in, lin_layers))
+        self.out_features_ = self.encoder[-1][0].out_features
         
         # Latent vectors mu and sigma
-        self.fc1 = nn.Linear(lin_layers[-1][0].out_features, latent_dim)
+        self.fc1 = nn.Linear(self.out_features_, latent_dim)
         self.bn1 = nn.BatchNorm1d(num_features=latent_dim)
         self.fc21 = nn.Linear(latent_dim, latent_dim)
         self.fc22 = nn.Linear(latent_dim, latent_dim)
@@ -66,11 +67,12 @@ class Autoencoder(nn.Module):
         # Sampling vector
         self.fc3 = nn.Linear(latent_dim, latent_dim)
         self.fc_bn3 = nn.BatchNorm1d(latent_dim)
-        self.fc4 = nn.Linear(latent_dim, lin_layers[-1][0].out_features)
-        self.fc_bn4 = nn.BatchNorm1d(lin_layers[-1][0].out_features)
+        self.fc4 = nn.Linear(latent_dim, self.out_features_)
+        self.fc_bn4 = nn.BatchNorm1d(self.out_features_)
         
         # Decoder
-        self.decoder = lin_layers_rev
+        # self.decoder = lin_layers_rev
+        self.decoder = nn.Sequential(*get_lin_layers_rev(D_in, lin_layers))
         
     def encode(self, x):
 
