@@ -12,7 +12,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 class Learner():
     """ helper class in which all the data relevant part is stored
     """
-    def __init__(self, model, opt, loss_func, data:DataLoader, target_name:str, target_class:int, cols:list, cont_vars:list=None):
+    def __init__(self, model, opt, loss_func, data:DataLoader, target_name:str=None, target_class:int=None, cols:list=None, cont_vars:list=None):
         self.model,self.opt,self.loss_func,self.data,self.target_name,self.target_class,self.cols,self.cont_vars = model,opt,loss_func,data,target_name,target_class,cols,cont_vars
 
 
@@ -114,7 +114,8 @@ class Runner():
         with torch.no_grad():
             pred = self.model.decode(z).cpu().numpy()
 
-        if self.target_name in self.cols: self.cols.remove(self.target_name)
+        if self.target_name:
+            if self.target_name in self.cols: self.cols.remove(self.target_name)
         df_fake = pd.DataFrame(pred, columns=self.cols)
         
         if scaler:
@@ -123,7 +124,7 @@ class Runner():
             else:
                 df_fake=pd.DataFrame(scaler.inverse_transform(df_fake), columns=self.cols)
 
-        df_fake[self.target_name]=self.target_class
+        if self.target_name: df_fake[self.target_name]=self.target_class
 
         return df_fake
 
@@ -134,7 +135,7 @@ class Runner():
         np_matrix = df_fake_with_noise[self.cols].values
         np_matrix = np.array([val+np.random.normal(mu, sigma[i], 1) for sublist in np_matrix for i, val in enumerate(sublist)]).reshape(-1,np_matrix.shape[1])
         df_fake_with_noise = pd.DataFrame(np_matrix, columns=self.cols)
-        df_fake_with_noise[self.target_name]=self.target_class
+        if self.target_name: df_fake_with_noise[self.target_name]=self.target_class
 
         return df_fake_with_noise
 
