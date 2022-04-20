@@ -16,6 +16,21 @@ def create_datasets(train_data: np.array, train_target: np.array,
     return trn_ds, tst_ds
 
 
+def create_datasets_no_target_var(train_data: np.array, test_data: np.array):
+    """Converts NumPy arrays into PyTorch datasets. No need of any dependend Variable"""
+
+    train_target = np.zeros((len(train_data),), dtype=int)
+    test_target = np.zeros((len(test_data),), dtype=int)
+
+    trn_ds = TensorDataset(
+        torch.tensor(train_data).float(),
+        torch.tensor(train_target).long())
+    tst_ds = TensorDataset(
+        torch.tensor(test_data).float(),
+        torch.tensor(test_target).long())
+    return trn_ds, tst_ds
+
+
 def create_loaders(data: TensorDataset, bs=128, jobs=0):
     """Wraps the datasets returned by create_datasets function with data loaders."""
 
