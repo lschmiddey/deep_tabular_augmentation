@@ -130,3 +130,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+DeepLearning_DataAugmentation_RF_demo.ipynb
+check_embeddings.ipynb
+dict_list_cat.pkl
+dict_inv_list_cat.pkl
