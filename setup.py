@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup_args = dict(
     name="deep_tabular_augmentation", 
-    version="0.5.0",
+    version="0.5.2",
     author="Lasse Schmidt",
     author_email="lasse.schmidt@live.de",
     description="Small package for data augmentation via Deep Learning",
