@@ -4,6 +4,7 @@ from typing import Any
 import torch
 from torch.nn import functional as F
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 from functools import partial
 import math
 
@@ -69,11 +70,26 @@ class LossTracker(Callback):
             print(f'train loss is: {sum(self.train_losses)/len(self.train_losses)}')
             print(f'validation loss is: {sum(self.val_losses)/len(self.val_losses)}')
 
+    def plot_train_vs_val_loss(self, skip_last=0):
+        figure(figsize=(8, 6), dpi=80)
+        plt.plot(self.train_losses[:len(self.train_losses)-skip_last], label="train data")
+        plt.plot(self.val_losses[:len(self.val_losses)-skip_last], label="validation data")
+        plt.legend()
+        plt.show()
+
+    def plot_train_vs_val_loss_last_epochs(self, show_last=100):
+        figure(figsize=(8, 6), dpi=80)
+        plt.plot(self.train_losses[len(self.train_losses)-show_last:], label="train data")
+        plt.plot(self.val_losses[len(self.val_losses)-show_last:], label="validation data")
+        plt.legend()
+        plt.show()
+
 
 class Recorder(Callback):
     def begin_fit(self):
         self.lrs = [[] for _ in self.opt.param_groups]
         self.losses = []
+        self.losses_val = []
 
     def after_batch(self):
         if not self.in_train: return
